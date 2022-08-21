@@ -33,19 +33,19 @@ fig = px.line(booked_processed, x=booked_processed.index.values, y='running_tota
 
 fig1 = px.line(transactions_including_cancelled, x=transactions_including_cancelled.index.values, range_y=(2000, 22000), y="running_total", 
             hover_data=["amount"],  labels={
-                     "running_total": "Running Total Including Cancelled (EUR)",
+                     "running_total": "Running Total Including Cancelled Transactions (EUR)",
                      "x": "Date"}
                      )
 
 fig2 = px.line(test_df, x=test_df.index, range_y=(2000, 22000), y="runningBalance", 
               labels={
-                     "runningBalance": "Test Balance (EUR)",
+                     "runningBalance": "Test Balance (EUR) (Verified Balance from banxware)",
                      "x": "Date"}
                      )
 
 fig3 = px.line(processed_df, x=processed_df.index, range_y=(2000, 22000), y="running_total", 
               labels={
-                     "running_total": "Processed Balance (EUR)",
+                     "running_total": "Processed Transactions Running Balance (EUR)",
                      "x": "Date"}
                      )
 
