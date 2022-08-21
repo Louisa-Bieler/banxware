@@ -32,12 +32,11 @@ def make_balance_df(api_url, auth):
     df = pd.DataFrame(balance, index=[0])
     return df
 
-def transform_transactions(transactions, balance):
-    """Returns non-cancelled transactions df grouped by date"""
+def with_cancelled_transaction_total(transactions, balance):
+    """Returns including cancelled transactions df grouped by date"""
     transactions_dated = transactions.astype({'date': 'datetime64[ns]'})
     transactions_dated['dates'] = pd.to_datetime(transactions_dated['date']).dt.date
-    transactions_dated_not_cancelled = pd.DataFrame(transactions_dated[transactions_dated['status'] != 'CANCELLED'])
-    transactions_grouped =  pd.DataFrame(transactions_dated_not_cancelled.groupby(['dates']).sum().sort_values(by='dates', ascending=False))    
+    transactions_grouped =  pd.DataFrame(transactions_dated.groupby(['dates']).sum().sort_values(by='dates', ascending=False))    
     balance = int(balance['amount'].values)
 
     new_array = []
@@ -47,21 +46,47 @@ def transform_transactions(transactions, balance):
         new_array.append(new_record)
         balance = new_record
     
-    transactions_grouped['running_total'] = new_array
+    transactions_grouped["running_total"] = new_array
 
     return transactions_grouped
    
+def transform_transactions_by__not_status(transactions, balance):
+    """Returns non-cancelled transactions df grouped by date"""
+    transactions_dated = transactions.astype({'date': 'datetime64[ns]'})
+    transactions_dated['dates'] = pd.to_datetime(transactions_dated['date']).dt.date
+    transactions_dated_status = pd.DataFrame(transactions_dated[transactions_dated['status'] != 'CANCELLED'])
+    transactions_grouped =  pd.DataFrame(transactions_dated_status.groupby(['dates']).sum().sort_values(by='dates', ascending=False))    
+    balance = int(balance['amount'].values)
+
+    new_array = []
+
+    for record in transactions_grouped['amount'].values:
+        new_record = balance - record
+        new_array.append(new_record)
+        balance = new_record
+    
+    transactions_grouped["running_total"] = new_array
+
+    return transactions_grouped
 
 transactions = make_transaction_df(trans_url, auth=auth)
 balance = make_balance_df(balance_url, auth)
-transactions_grouped = transform_transactions(transactions, balance)
 
-print(transactions_grouped.head())
 
-fig = px.line(transactions_grouped, x=transactions_grouped.index.values, y="running_total", hover_data=["amount"], labels={
+booked_processed = transform_transactions_by__not_status(transactions, balance)
+transactions_including_cancelled = with_cancelled_transaction_total(transactions, balance)
+
+fig = px.line(booked_processed, x=booked_processed.index.values, y='running_total',
+                hover_data=["amount"], labels={
                      "running_total": "Running Total (EUR)",
                      "x": "Date"}
-                 )
+                     )
+
+fig1 = px.line(transactions_including_cancelled, x=transactions_including_cancelled.index.values, range_y=(2000, 22000), y="running_total", 
+            hover_data=["amount"],  labels={
+                     "running_total": "Running Total Including Cancelled (EUR)",
+                     "x": "Date"}
+                     )
 
 app.layout = html.Div(children=[
     html.H1(children='Merchant Foo'),
@@ -73,6 +98,11 @@ app.layout = html.Div(children=[
     dcc.Graph(
         id='example-graph',
         figure=fig
+    ),
+
+    dcc.Graph(
+        id='example-graph1',
+        figure=fig1
     )
 ])
 
